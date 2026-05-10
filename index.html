@@ -8,7 +8,7 @@
     <!-- SEO básico -->
     <title>arquitrivia · Trivia para clases de arquitectura</title>
     <meta name="description" content="Plataforma 100% gratuita para gamificar clases de arquitectura, urbanismo, estructuras y diseño. Crea tableros de trivia personalizados y proyéctalos en clase. Hecho por estudiantes, para estudiantes." />
-    <meta name="keywords" content="trivia arquitectura, juego arquitectura, gamificación clase, dinámica clase universitaria, herramienta educativa arquitectura, trivia urbanismo, repaso arquitectura" />
+    <meta name="keywords" content="trivia arquitectura, juego arquitectura, gamificación clase, dinámica clase universitaria, herramienta educativa arquitectura, trivia urbanismo, repaso arquitectura, kahoot arquitectura, alternativa kahoot" />
     <meta name="author" content="reneblanco" />
     <link rel="canonical" href="https://arquitrivia.com/" />
 
@@ -31,8 +31,97 @@
     <meta name="twitter:description" content="Plataforma 100% gratuita para gamificar clases de arquitectura. Crea tableros de trivia y proyéctalos en clase." />
     <meta name="twitter:image" content="https://arquitrivia.com/og-image.png" />
 
-    <!-- Favicon -->
+    <!-- Favicon y PWA -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Structured Data: WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "arquitrivia",
+      "url": "https://arquitrivia.com/",
+      "description": "Plataforma 100% gratuita para gamificar clases de arquitectura, urbanismo, estructuras, diseño y sustentabilidad. Crea tableros de trivia personalizados o usa los precargados.",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Any",
+      "inLanguage": "es-MX",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+      },
+      "audience": {
+        "@type": "EducationalAudience",
+        "educationalRole": ["teacher", "student"]
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "René Blanco",
+        "url": "https://reneblanco.com"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Es realmente gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. arquitrivia es 100% gratis. Sin tarjeta, sin trial, sin plan premium oculto."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Necesito registrarme o crear cuenta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Abres arquitrivia.com y ya. Puedes jugar Partida Rápida en 30 segundos sin registro."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Para qué materias de arquitectura sirve?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tenemos cinco tableros precargados — Historia, Estructuras, Diseño, Urbanismo y Sustentabilidad. Y puedes crear tu propio tablero personalizado en 10 minutos."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cómo lo proyecto en clase?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Conecta tu laptop al cañón o televisión del salón como cualquier presentación. arquitrivia está diseñado para verse perfecto proyectado."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Funciona en clase virtual o híbrida?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Comparte tu pantalla en Zoom, Google Meet o Teams como harías con cualquier presentación."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Puedo guardar mis tableros para reusarlos?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Cuando guardas un tablero en la nube, te asignamos un código único que puedes anotar y reutilizar en cualquier momento."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

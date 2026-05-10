@@ -1,0 +1,7 @@
+# arquitrivia.com
+# Trivia para clases de arquitectura
+
+User-agent: *
+Allow: /
+
+Sitemap: https://arquitrivia.com/sitemap.xml

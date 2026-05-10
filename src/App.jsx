@@ -110,10 +110,10 @@ const PRELOADED_BOARDS = [
       {
         name: "Elementos Estructurales",
         questions: [
-          { id: "e3q1", points: 100, q: "Elemento vertical que soporta mainly esfuerzos de compresión.", a: "Columna", answered: false },
+          { id: "e3q1", points: 100, q: "Elemento vertical que soporta principalmente esfuerzos de compresión.", a: "Columna", answered: false },
           { id: "e3q2", points: 200, q: "Elemento horizontal que soporta cargas transversales y trabaja a flexión.", a: "Viga", answered: false },
           { id: "e3q3", points: 300, q: "Parte de la estructura que transmite las cargas directamente al terreno.", a: "Cimentación (o Zapata)", answered: false },
-          { id: "e3q4", points: 400, q: "Muro diseñado para resistir cargas horizontales paralelas a su plano (ej. sismos).", a: "Muro de Cortante / Muro de Carga", answered: false },
+          { id: "e3q4", points: 400, q: "Muro diseñado para resistir cargas horizontales paralelas a su plano (ej. sismos).", a: "Muro de Cortante (o Muro de Rigidez)", answered: false },
           { id: "e3q5", points: 500, q: "Estructura reticular formada por barras rectas interconectadas en nodos (triángulos).", a: "Armadura (o Cercha)", answered: false },
         ]
       },
@@ -124,7 +124,7 @@ const PRELOADED_BOARDS = [
           { id: "e4q2", points: 200, q: "Aleación de hierro y carbono, excelente tanto para tensión como para compresión.", a: "Acero", answered: false },
           { id: "e4q3", points: 300, q: "Material orgánico cuyas fibras resisten bien la tensión paralela al grano.", a: "Madera", answered: false },
           { id: "e4q4", points: 400, q: "Sistema compuesto donde el acero absorbe la tensión y el cemento la compresión.", a: "Concreto Armado (Hormigón Armado)", answered: false },
-          { id: "e4q5", points: 500, q: "Concreto al que se le aplican esfuerzos de compresión internos antes de someterlo a cargas externas.", a: "Concreto Presforzado / Postensado", answered: false },
+          { id: "e4q5", points: 500, q: "Concreto al que se le aplican esfuerzos de compresión internos antes de someterlo a cargas externas.", a: "Concreto Presforzado (Pretensado o Postensado)", answered: false },
         ]
       }
     ]
@@ -200,7 +200,7 @@ const PRELOADED_BOARDS = [
           { id: "u2q2", points: 200, q: "Canales por donde el observador se mueve (calles, senderos, canales de tránsito).", a: "Sendas / Vías (Paths)", answered: false },
           { id: "u2q3", points: 300, q: "Puntos estratégicos o focos intensivos hacia los que uno viaja (cruces de calles, plazas).", a: "Nodos (Nodes)", answered: false },
           { id: "u2q4", points: 400, q: "Secciones de la ciudad de tamaño medio, reconocibles por un carácter común (barrios).", a: "Barrios / Distritos (Districts)", answered: false },
-          { id: "u2q5", points: 500, q: "Límites lineales o rupturas en la continuity (ríos, vías de tren, muros).", a: "Bordes (Edges)", answered: false },
+          { id: "u2q5", points: 500, q: "Límites lineales o rupturas en la continuidad (ríos, vías de tren, muros).", a: "Bordes (Edges)", answered: false },
         ]
       },
       {
@@ -244,7 +244,7 @@ const PRELOADED_BOARDS = [
       {
         name: "Estrategias Pasivas",
         questions: [
-          { id: "s2q1", points: 100, q: "Aberturas en fachadas opuestas que permiten que el aire circule y enfríe el espacio naturally.", a: "Ventilación Cruzada", answered: false },
+          { id: "s2q1", points: 100, q: "Aberturas en fachadas opuestas que permiten que el aire circule y enfríe el espacio de manera natural.", a: "Ventilación Cruzada", answered: false },
           { id: "s2q2", points: 200, q: "Capacidad de un material (como concreto o piedra) de absorber, almacenar y liberar calor lentamente.", a: "Masa Térmica / Inercia Térmica", answered: false },
           { id: "s2q3", points: 300, q: "Sistema pasivo de calefacción solar que usa un muro oscuro pintado detrás de un vidrio orientado al sol.", a: "Muro Trombe", answered: false },
           { id: "s2q4", points: 400, q: "Ventilación que aprovecha que el aire caliente es más ligero y sube, escapando por la parte alta del edificio.", a: "Efecto Chimenea / Ventilación Termosifónica", answered: false },
@@ -293,6 +293,8 @@ function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [showQuickPlayModal, setShowQuickPlayModal] = useState(false);
+  const [showFreshBoardConfirm, setShowFreshBoardConfirm] = useState(false);
+  const [codeJustCopied, setCodeJustCopied] = useState(false);
 
   // Quick play & Timer
   const [quickPlayNames, setQuickPlayNames] = useState(["", ""]);
@@ -393,6 +395,35 @@ function App() {
     }
   }, [gameState]);
 
+  // --- UX: scroll al inicio cuando cambia la vista ---
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [gameState]);
+
+  // --- ACCESIBILIDAD: Escape cierra cualquier modal abierto ---
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key !== 'Escape') return;
+      if (activeQuestion) {
+        setActiveQuestion(null);
+        setShowAnswer(false);
+        setIsTimerRunning(false);
+      } else if (showQuickPlayModal) {
+        setShowQuickPlayModal(false);
+      } else if (showCommentModal) {
+        setShowCommentModal(false);
+      } else if (showRulesModal) {
+        setShowRulesModal(false);
+      } else if (showResetConfirm) {
+        setShowResetConfirm(false);
+      } else if (showFreshBoardConfirm) {
+        setShowFreshBoardConfirm(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [activeQuestion, showQuickPlayModal, showCommentModal, showRulesModal, showResetConfirm, showFreshBoardConfirm]);
+
   // --- LOCAL STORAGE LOGIC ---
   useEffect(() => {
     const savedData = localStorage.getItem('arquitrivia-save');
@@ -434,6 +465,10 @@ function App() {
   const handleAddTeam = (e) => {
     e.preventDefault();
     if (!newTeamName.trim()) return;
+    if (teams.length >= 4) {
+      alert("Máximo 4 equipos por partida. Si tu grupo es grande, divídelo en 4 equipos grandes — la dinámica funciona mejor así.");
+      return;
+    }
     setTeams([...teams, { id: Date.now(), name: newTeamName.trim(), score: 0 }]);
     setNewTeamName("");
   };
@@ -564,7 +599,7 @@ function App() {
       setBoardCode(codeToSave);
       setCustomCategories(newCustomCategories);
       setSelectedBoardId('custom');
-      setGameState('setup');
+      setGameState('editorSaved');
     } catch (error) {
       console.error("Error guardando tablero en la nube:", error);
       alert("Hubo un error al guardar en la nube. Revisa tu conexión.");
@@ -599,6 +634,39 @@ function App() {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleStartFreshBoard = () => {
+    setShowFreshBoardConfirm(true);
+  };
+
+  const handleConfirmFreshBoard = () => {
+    const blankTimestamp = Date.now();
+    const blankCategory = {
+      name: "Categoría 1",
+      questions: [
+        { id: blankTimestamp + "1", points: 100, q: "", a: "", answered: false },
+        { id: blankTimestamp + "2", points: 200, q: "", a: "", answered: false },
+        { id: blankTimestamp + "3", points: 300, q: "", a: "", answered: false },
+        { id: blankTimestamp + "4", points: 400, q: "", a: "", answered: false },
+        { id: blankTimestamp + "5", points: 500, q: "", a: "", answered: false },
+      ]
+    };
+    setEditingCategories([blankCategory]);
+    setActiveEditCatIndex(0);
+    setBoardCode("");
+    setShowFreshBoardConfirm(false);
+  };
+
+  const handleCopyBoardCode = () => {
+    navigator.clipboard.writeText(boardCode);
+    setCodeJustCopied(true);
+    setTimeout(() => setCodeJustCopied(false), 2500);
+  };
+
+  const handlePlaySavedBoard = () => {
+    setCategories(JSON.parse(JSON.stringify(customCategories)));
+    setGameState('playing');
   };
 
   const handleAddCategory = () => {
@@ -773,13 +841,17 @@ function App() {
           onClick={() => setGameState('about')}
           className="font-black uppercase tracking-widest text-sm text-black bg-[#faf9f6] border-4 border-black px-6 py-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
         >
-          Custom App / Contacto
+          Hablemos →
         </button>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 border-t-2 border-black/20 pt-6 mt-4 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-black/60">
         <span>© {new Date().getFullYear()} arquitrivia. Todos los derechos reservados.</span>
-        <span>Made with ❤️ in 🇲🇽 by <a href="https://reneblanco.com" target="_blank" rel="noopener noreferrer" className="text-black hover:text-[#ffe600] transition-colors underline font-black">reneblanco</a></span>
+        <div className="flex flex-wrap gap-4 items-center">
+          <button onClick={() => setGameState('privacy')} className="hover:text-black transition-colors underline">Privacidad</button>
+          <button onClick={() => setGameState('terms')} className="hover:text-black transition-colors underline">Términos</button>
+          <span>Made with ❤️ in 🇲🇽 by <a href="https://reneblanco.com" target="_blank" rel="noopener noreferrer" className="text-black hover:text-[#ffe600] transition-colors underline font-black">reneblanco</a></span>
+        </div>
       </div>
     </footer>
   );
@@ -795,7 +867,7 @@ function App() {
           WebkitMaskImage: 'linear-gradient(to bottom, white, transparent 60%)'
         }}></div>
 
-        <header className="relative z-10 border-b-4 border-black bg-white/90 backdrop-blur-sm sticky top-0 shrink-0">
+        <header className="relative z-50 border-b-4 border-black bg-white sticky top-0 shrink-0">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Logo className="text-2xl" />
             <nav className="hidden md:flex gap-8 font-bold text-sm tracking-wide uppercase">
@@ -824,22 +896,22 @@ function App() {
 
             <div className="bg-[#ff3366] border-4 border-black p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-3xl mb-14 -rotate-1 transform transition-transform hover:rotate-0 duration-300">
               <p className="text-lg md:text-2xl font-bold text-white leading-relaxed">
-                arquitrivia es la herramienta web diseñada para potenciar tu enseñanza. Convierte el repaso del temario en una competencia emocionante y mantén a todo tu grupo participando activamente.
+                El grupo entero discutiendo, levantando la mano, contando puntos como si fuera la final de algo. arquitrivia es el formato que convierte el repaso del temario en eso, en una hora de clase. Tú pones el temario; lo demás ya está armado.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center w-full max-w-2xl mb-10">
               <button
-                onClick={() => setGameState('setup')}
+                onClick={() => setShowQuickPlayModal(true)}
                 className="flex-1 bg-[#ffe600] text-black font-black text-lg md:text-xl px-8 py-6 border-4 border-black transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] flex items-center justify-center gap-3 uppercase tracking-wide"
               >
-                Crea tu Tablero <Settings size={24} strokeWidth={3} />
+                Partida Rápida <Play size={24} strokeWidth={3} fill="currentColor" />
               </button>
               <button
-                onClick={() => setShowQuickPlayModal(true)}
+                onClick={() => setGameState('setup')}
                 className="flex-1 bg-white text-black font-black text-lg md:text-xl px-8 py-6 border-4 border-black transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] flex items-center justify-center gap-3 uppercase tracking-wide"
               >
-                Partida Rápida <Play size={24} strokeWidth={3} fill="currentColor" />
+                Partida Personalizada <Settings size={24} strokeWidth={3} />
               </button>
             </div>
 
@@ -861,21 +933,21 @@ function App() {
                     <Lightbulb size={32} strokeWidth={3} />
                   </div>
                   <h3 className="text-2xl font-black mb-4 uppercase">1. Personaliza</h3>
-                  <p className="font-medium text-gray-600 leading-relaxed">Crea tus propias categorías y preguntas a la medida del temario de tu clase en nuestro potente editor visual.</p>
+                  <p className="font-medium text-gray-600 leading-relaxed">Tu temario ya lo tienes en la cabeza. Vacíalo en el editor en diez minutos — categorías, preguntas, respuestas, listo. O parte de uno de nuestros cinco tableros precargados de Historia, Estructuras, Diseño, Urbanismo o Sustentabilidad.</p>
                 </div>
                 <div className="bg-[#faf9f6] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-start md:translate-y-8 hover:-translate-y-2 transition-transform">
                   <div className="bg-[#00d0ff] border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                     <MonitorPlay size={32} strokeWidth={3} />
                   </div>
                   <h3 className="text-2xl font-black mb-4 uppercase">2. Proyecta</h3>
-                  <p className="font-medium text-gray-600 leading-relaxed">Registra a los equipos participantes y proyecta la pantalla completa en el salón de clases. La interfaz está diseñada para verse increíble.</p>
+                  <p className="font-medium text-gray-600 leading-relaxed">Divide al grupo en equipos (filas, mesas, como prefieras). Conecta tu laptop al cañón. Eso es todo. La interfaz está diseñada para verse perfecta proyectada — letras grandes, contraste alto, cero distracciones.</p>
                 </div>
                 <div className="bg-[#faf9f6] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-start hover:-translate-y-2 transition-transform">
                   <div className="bg-[#00ff66] border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                     <Trophy size={32} strokeWidth={3} />
                   </div>
                   <h3 className="text-2xl font-black mb-4 uppercase">3. Compite</h3>
-                  <p className="font-medium text-gray-600 leading-relaxed">Los equipos eligen casillas por su valor en puntos. Revela la respuesta y asigna (o resta) puntos fácilmente desde el control maestro.</p>
+                  <p className="font-medium text-gray-600 leading-relaxed">Cada equipo elige casilla. Veinte segundos para responder. Aciertan, suman. Fallan, restan. Tú revelas la respuesta y asignas puntos con un clic. Una hora vuela.</p>
                 </div>
               </div>
             </div>
@@ -895,27 +967,27 @@ function App() {
                   <div className="flex gap-6 items-start">
                     <div className="bg-[#00ff66] border-4 border-black w-12 h-12 shrink-0 flex items-center justify-center font-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">1</div>
                     <div>
-                      <h3 className="text-2xl font-black uppercase mb-2">Acierta o Castiga (El Riesgo)</h3>
+                      <h3 className="text-2xl font-black uppercase mb-2">Acierta o castiga</h3>
                       <p className="font-medium text-gray-700 leading-relaxed text-lg">
-                        Si tu equipo da la respuesta correcta, ¡suman los puntos! Pero cuidado: si se equivocan intentando adivinar, <strong className="text-[#ff3366]">esos puntos se restan</strong> de su marcador. Si no están seguros, es mejor pasar en silencio. (El silencio no suma, pero tampoco resta).
+                        Suma quien acierta. <strong className="text-[#ff3366]">Resta</strong> quien intenta y falla. Quien se queda callado, ni gana ni pierde. Sí, esto cambia todo el cálculo de cuándo conviene levantar la mano.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-6 items-start">
                     <div className="bg-[#00d0ff] border-4 border-black w-12 h-12 shrink-0 flex items-center justify-center font-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">2</div>
                     <div>
-                      <h3 className="text-2xl font-black uppercase mb-2">El Reloj Implacable</h3>
+                      <h3 className="text-2xl font-black uppercase mb-2">El reloj no perdona</h3>
                       <p className="font-medium text-gray-700 leading-relaxed text-lg">
-                        Tienen <strong>20 segundos</strong> en el reloj una vez que se abre la pregunta para debatir y gritar su respuesta definitiva. Si el reloj llega a cero sin una respuesta, se pierde la oportunidad de sumar (y nadie es penalizado).
+                        <strong>Veinte segundos</strong> por pregunta para debatir, dudar, gritar la respuesta. Si llega a cero sin respuesta, el equipo pierde el turno — pero no pierde puntos.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-6 items-start">
                     <div className="bg-[#ffe600] border-4 border-black w-12 h-12 shrink-0 flex items-center justify-center font-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">3</div>
                     <div>
-                      <h3 className="text-2xl font-black uppercase mb-2">Pregunta Quemada</h3>
+                      <h3 className="text-2xl font-black uppercase mb-2">Pregunta quemada</h3>
                       <p className="font-medium text-gray-700 leading-relaxed text-lg">
-                        Casilla abierta, casilla jugada. No importa si la acertaron, la fallaron o dejaron que se agotara el tiempo; una vez que el maestro revela la respuesta oficial, la casilla queda <strong>deshabilitada</strong> por el resto de la partida.
+                        Casilla abierta es casilla jugada. Da igual si fue acierto, error o silencio: una vez revelada la respuesta, queda <strong>sellada</strong> por el resto de la partida.
                       </p>
                     </div>
                   </div>
@@ -931,7 +1003,7 @@ function App() {
                   Comunidad arquitrivia
                 </h2>
                 <p className="text-xl font-bold text-black bg-white inline-block px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-1">
-                  Descubre cómo estamos transformando la dinámica en el aula.
+                  Ya está corriendo en universidades de México. Esto dicen quienes lo han usado.
                 </p>
               </div>
 
@@ -979,6 +1051,64 @@ function App() {
             </div>
           </section>
 
+          <section id="faq" className="border-t-4 border-black bg-[#faf9f6] relative py-24 z-10">
+            <div className="max-w-4xl mx-auto px-6 relative z-10">
+              <div className="text-center mb-12">
+                <div className="inline-block bg-[#00ff66] border-4 border-black px-4 py-2 font-black text-sm uppercase tracking-widest mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-1">
+                  Preguntas Frecuentes
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 uppercase">Lo que más nos preguntan</h2>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  {
+                    q: "¿Es realmente gratis?",
+                    a: "Sí. arquitrivia es 100% gratis. Sin tarjeta, sin trial, sin ‘plan premium oculto’. Si en el futuro lanzamos algo de pago, será una versión Pro opcional para escuelas — el uso individual de profes y alumnos seguirá siendo gratis."
+                  },
+                  {
+                    q: "¿Necesito registrarme o crear cuenta?",
+                    a: "No. Abres arquitrivia.com y ya. Puedes jugar Partida Rápida en 30 segundos sin registro. Si creas un tablero personalizado, te damos un código tipo ARQ-X7B2 que puedes usar para cargarlo en cualquier computadora más adelante."
+                  },
+                  {
+                    q: "¿Para qué materias de arquitectura sirve?",
+                    a: "Tenemos cinco tableros precargados — Historia, Estructuras, Diseño, Urbanismo y Sustentabilidad — cubriendo el grueso del temario de cualquier carrera de arquitectura. Y si das una materia más específica (Restauración, Paisaje, BIM, Composición, etc.), puedes crear tu propio tablero en 10 minutos en el editor."
+                  },
+                  {
+                    q: "¿Cómo lo proyecto en clase?",
+                    a: "Conecta tu laptop al cañón o televisión del salón como cualquier presentación. arquitrivia está diseñado para verse perfecto proyectado — letras grandes, contraste alto, casillas legibles desde el fondo del salón."
+                  },
+                  {
+                    q: "¿Funciona en clase virtual o híbrida?",
+                    a: "Sí. Comparte tu pantalla en Zoom, Google Meet o Teams como harías con cualquier presentación. Los alumnos ven el tablero en sus pantallas y los equipos coordinan respuestas por chat o por voz."
+                  },
+                  {
+                    q: "¿Cuántos equipos pueden jugar al mismo tiempo?",
+                    a: "Técnicamente no hay límite. En la práctica, con 4-6 equipos la dinámica funciona mejor. Si tienes un grupo grande (40+ alumnos), divide en equipos por filas o por mesas."
+                  },
+                  {
+                    q: "¿Puedo guardar mis tableros para reusarlos el siguiente semestre?",
+                    a: "Sí. Cuando guardas un tablero en la nube, te asignamos un código único que puedes anotar y reutilizar en cualquier momento. Solo lo introduces en la pantalla de inicio y se carga listo para jugar."
+                  },
+                  {
+                    q: "¿Quién hizo esto y por qué?",
+                    a: "arquitrivia es un proyecto hecho por estudiantes de arquitectura para profes y compañeros de la carrera. Nació después de ver que una dinámica de trivia en una clase de Historia transformó por completo el engagement del grupo. La hicimos gratis para que cualquier profe pueda hacer lo mismo sin tener que organizar el juego desde cero."
+                  }
+                ].map((item, idx) => (
+                  <details key={idx} className="bg-white border-4 border-black p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group">
+                    <summary className="font-black text-lg md:text-xl uppercase tracking-tight cursor-pointer flex items-center justify-between gap-4 list-none">
+                      <span>{item.q}</span>
+                      <ChevronRight size={24} strokeWidth={3} className="shrink-0 group-open:rotate-90 transition-transform" />
+                    </summary>
+                    <p className="font-medium text-gray-700 leading-relaxed mt-4 pt-4 border-t-2 border-black/10">
+                      {item.a}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </section>
+
           <section id="compartir" className="border-t-4 border-black bg-white relative py-24 z-10">
             <div className="max-w-5xl mx-auto px-6 relative z-10 text-center">
 
@@ -993,22 +1123,22 @@ function App() {
                   </div>
 
                   <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">
-                    Impulsa la educación interactiva
+                    ¿Te ha funcionado? Pásalo.
                   </h2>
 
                   <p className="text-xl md:text-2xl font-bold text-black/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-                    Si esta herramienta ha aportado valor a tus sesiones, <strong>compártela con tu red docente</strong> y colegas académicos. arquitrivia es 100% gratuita, y tu recomendación nos permite seguir desarrollando tecnología educativa de primer nivel.
+                    arquitrivia es gratis y va a seguir siendo gratis. La única manera de que llegue a más facultades es que la gente que ya la usa la recomiende. Si te funcionó en clase, mándale el link a otro profe — o a un alumno organizando un repaso para parcial.
                   </p>
 
                   <div className="flex flex-wrap justify-center gap-4 md:gap-6">
                     <button
-                      onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent('Descubre arquitrivia: la herramienta 100% gratuita para gamificar tus clases de arquitectura. Cero fricción, cero costo. Pruébalo en tu clase 🚀🏛️ https://arquitrivia.com')}`, '_blank')}
+                      onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent('Descubre arquitrivia: trivia para clases de arquitectura, hecha por estudiantes. Cinco tableros listos o crea el tuyo en 10 min. Cero costo, cero registro. https://arquitrivia.com')}`, '_blank')}
                       className="bg-[#faf9f6] text-[#25D366] hover:bg-[#25D366] hover:text-white border-4 border-black font-black text-lg px-6 py-4 flex items-center gap-3 uppercase tracking-widest transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
                     >
                       <MessageCircle size={24} strokeWidth={3} /> WhatsApp
                     </button>
                     <button
-                      onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Descubre arquitrivia: la herramienta 100% gratuita para gamificar tus clases de arquitectura. Cero fricción, cero costo. Pruébalo en tu clase 🚀🏛️')}&url=${encodeURIComponent('https://arquitrivia.com')}`, '_blank')}
+                      onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Encontré arquitrivia: trivia para clases de arquitectura, gratis, sin registro. Cinco tableros listos o creas el tuyo.')}&url=${encodeURIComponent('https://arquitrivia.com')}`, '_blank')}
                       className="bg-[#faf9f6] text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white border-4 border-black font-black text-lg px-6 py-4 flex items-center gap-3 uppercase tracking-widest transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
                     >
                       <Twitter size={24} strokeWidth={3} /> X (Twitter)
@@ -1048,7 +1178,8 @@ function App() {
             <div className="relative z-10 w-full max-w-4xl bg-[#ff3366] border-4 border-black p-6 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
               <button
                 onClick={() => setShowCommentModal(false)}
-                className="absolute top-4 right-4 bg-white border-4 border-black p-2 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20"
+                aria-label="Cerrar modal de comentarios"
+                className="absolute top-4 right-4 bg-white border-4 border-black p-2 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#00d0ff]"
               >
                 <X size={24} strokeWidth={4} />
               </button>
@@ -1110,7 +1241,7 @@ function App() {
                     {newCommentImage && (
                       <div className="mt-4 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-32 h-32 relative transform -rotate-2 bg-white p-2">
                         <img src={newCommentImage} alt="Preview" className="w-full h-full object-cover border-2 border-black" />
-                        <button type="button" onClick={() => setNewCommentImage(null)} className="absolute -top-3 -right-3 bg-[#ff3366] text-white border-2 border-black p-1 hover:scale-110 transition-transform z-20" title="Eliminar foto">
+                        <button type="button" onClick={() => setNewCommentImage(null)} aria-label="Eliminar foto cargada" className="absolute -top-3 -right-3 bg-[#ff3366] text-white border-2 border-black p-1 hover:scale-110 transition-transform z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black" title="Eliminar foto">
                           <X size={16} strokeWidth={4} />
                         </button>
                       </div>
@@ -1131,56 +1262,57 @@ function App() {
         )}
 
         {showQuickPlayModal && (
-          <div className="fixed inset-0 bg-[#faf9f6]/95 z-[100] flex items-start justify-center p-4 pt-12 md:pt-20 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 bg-[#faf9f6]/95 z-[100] flex items-start justify-center p-4 pt-8 md:pt-12 backdrop-blur-md overflow-y-auto">
             <div className="fixed inset-0 z-0 pointer-events-none opacity-20" style={{
               backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
               backgroundSize: '40px 40px'
             }}></div>
-            <div className="relative z-10 w-full max-w-5xl bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
+            <div className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] mb-16 shrink-0">
               <button
                 onClick={() => setShowQuickPlayModal(false)}
-                className="absolute top-4 right-4 bg-white border-4 border-black p-2 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20"
+                aria-label="Cerrar modal"
+                className="absolute top-3 right-3 bg-white border-4 border-black p-1.5 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#00d0ff]"
               >
-                <X size={24} strokeWidth={3} />
+                <X size={20} strokeWidth={3} />
               </button>
 
-              <div className="mb-10 max-w-2xl">
-                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-6">Partida Rápida (1 vs 1)</h2>
+              <div className="mb-6 max-w-2xl">
+                <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-4">Partida Rápida (1 vs 1)</h2>
 
-                <label className="block text-left font-bold uppercase text-sm mb-4 text-gray-500">¿Quiénes van a jugar? (Si estás solo, llena uno)</label>
+                <label className="block text-left font-bold uppercase text-xs mb-3 text-gray-500">¿Quiénes van a jugar? (Si estás solo, llena uno)</label>
 
-                <div className="flex flex-col md:flex-row gap-4 mb-8">
+                <div className="flex flex-col md:flex-row gap-3 mb-5">
                   <input
                     type="text"
                     value={quickPlayNames[0]}
                     onChange={(e) => handleUpdateQuickPlayName(0, e.target.value)}
                     placeholder="Jugador 1 (Ej: René)"
-                    className="flex-1 bg-[#faf9f6] border-4 border-black px-6 py-4 font-bold text-xl focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner"
+                    className="flex-1 bg-[#faf9f6] border-4 border-black px-4 py-2.5 font-bold text-base focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner"
                   />
                   <input
                     type="text"
                     value={quickPlayNames[1]}
                     onChange={(e) => handleUpdateQuickPlayName(1, e.target.value)}
                     placeholder="Jugador 2 (Opcional)"
-                    className="flex-1 bg-[#faf9f6] border-4 border-black px-6 py-4 font-bold text-xl focus:outline-none focus:bg-[#00d0ff]/20 transition-colors shadow-inner"
+                    className="flex-1 bg-[#faf9f6] border-4 border-black px-4 py-2.5 font-bold text-base focus:outline-none focus:bg-[#00d0ff]/20 transition-colors shadow-inner"
                   />
                 </div>
-                <p className="text-gray-600 font-bold text-lg mb-4">Selecciona un tema para iniciar la batalla al instante:</p>
+                <p className="text-gray-600 font-bold text-sm">Selecciona un tema para iniciar la batalla al instante:</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {PRELOADED_BOARDS.map((board, idx) => (
                   <button
                     key={board.id}
                     onClick={() => handleSelectQuickPlayBoard(idx)}
-                    className="text-left bg-[#faf9f6] border-4 border-black p-6 group transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] active:bg-gray-100 flex flex-col h-full"
+                    className="text-left bg-[#faf9f6] border-4 border-black p-4 group transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] active:bg-gray-100 flex flex-col h-full focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#ff3366]"
                   >
-                    <div className="w-12 h-12 border-2 border-black mb-4 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] group-hover:-rotate-6 transition-transform duration-300" style={{ backgroundColor: board.color }}>
-                      <BookOpen size={24} strokeWidth={2.5} className={board.color === '#00d0ff' || board.color === '#00ff66' || board.color === '#ffe600' ? 'text-black' : 'text-white'} />
+                    <div className="w-10 h-10 border-2 border-black mb-3 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] group-hover:-rotate-6 transition-transform duration-300" style={{ backgroundColor: board.color }}>
+                      <BookOpen size={20} strokeWidth={2.5} className={board.color === '#00d0ff' || board.color === '#00ff66' || board.color === '#ffe600' ? 'text-black' : 'text-white'} />
                     </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight mb-2 leading-tight group-hover:text-black">{board.title}</h3>
-                    <p className="text-gray-600 font-medium text-sm leading-relaxed flex-grow">{board.description}</p>
-                    <div className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-black/50 group-hover:text-black">
-                      Jugar ahora <ChevronRight size={16} strokeWidth={3} />
+                    <h3 className="text-lg font-black uppercase tracking-tight mb-1 leading-tight group-hover:text-black">{board.title}</h3>
+                    <p className="text-gray-600 font-medium text-xs leading-relaxed flex-grow">{board.description}</p>
+                    <div className="mt-4 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-black/50 group-hover:text-black">
+                      Jugar ahora <ChevronRight size={14} strokeWidth={3} />
                     </div>
                   </button>
                 ))}
@@ -1209,36 +1341,6 @@ function App() {
 
         <main className="relative z-10 max-w-6xl w-full mx-auto px-4 flex-1 pb-12 flex flex-col gap-8">
 
-          <div className="bg-[#00d0ff] border-4 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-              <div className="bg-white border-4 border-black p-4 shrink-0 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-3">
-                <Cloud size={40} className="text-[#00d0ff]" />
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-black uppercase mb-1">Cargar desde la Nube</h2>
-                <p className="text-black/80 font-bold text-sm">¿Tienes un código de tablero? Introdúcelo aquí para descargarlo.</p>
-              </div>
-              <form onSubmit={handleSearchCloudBoard} className="w-full md:w-auto flex flex-col md:flex-row gap-2">
-                <input
-                  type="text"
-                  value={searchCloudCode}
-                  onChange={(e) => setSearchCloudCode(e.target.value.toUpperCase())}
-                  placeholder="EJ: ARQ-X7B2"
-                  className="bg-white border-4 border-black px-4 py-3 font-black text-center tracking-widest uppercase focus:outline-none focus:ring-4 focus:ring-[#ffe600] w-full md:w-48 shadow-inner"
-                />
-                <button
-                  type="submit"
-                  disabled={isSearching || !searchCloudCode.trim()}
-                  className="bg-black text-white px-6 py-3 border-4 border-black font-black uppercase text-sm hover:bg-[#ffe600] hover:text-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                  Buscar
-                </button>
-              </form>
-            </div>
-            {cloudError && <p className="text-black bg-white border-2 border-black font-bold text-sm text-center mt-4 p-2">{cloudError}</p>}
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] flex flex-col">
               <h2 className="text-3xl font-black uppercase mb-2">Paso 1: Participantes</h2>
@@ -1257,24 +1359,31 @@ function App() {
                         <span className="bg-black text-white w-6 h-6 flex items-center justify-center text-xs rounded-full">{index + 1}</span>
                         {t.name}
                       </span>
-                      <button onClick={() => handleRemoveTeam(t.id)} className="text-gray-400 hover:text-[#ff3366] transition-colors">
+                      <button onClick={() => handleRemoveTeam(t.id)} aria-label={`Eliminar equipo ${t.name}`} className="text-gray-400 hover:text-[#ff3366] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff3366]">
                         <Trash2 size={20} />
                       </button>
                     </li>
                   ))}
                 </ul>
-                <form onSubmit={handleAddTeam} className="flex gap-2 mt-auto">
-                  <input
-                    type="text"
-                    value={newTeamName}
-                    onChange={(e) => setNewTeamName(e.target.value)}
-                    placeholder="Ej: Fila 1, Los Arquitectos..."
-                    className="flex-1 px-4 py-3 bg-[#faf9f6] border-2 border-black font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#ffe600] placeholder:text-gray-400 placeholder:font-medium transition-colors"
-                  />
-                  <button type="submit" className="bg-black text-white hover:bg-[#ffe600] hover:text-black border-2 border-black px-5 flex items-center justify-center transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]">
-                    <Plus size={24} /> Agregar
-                  </button>
-                </form>
+                {teams.length < 4 ? (
+                  <form onSubmit={handleAddTeam} className="flex gap-2 mt-auto">
+                    <input
+                      type="text"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      placeholder="Ej: Fila 1, Los Arquitectos..."
+                      className="flex-1 px-4 py-3 bg-[#faf9f6] border-2 border-black font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#ffe600] placeholder:text-gray-400 placeholder:font-medium transition-colors"
+                    />
+                    <button type="submit" className="bg-black text-white hover:bg-[#ffe600] hover:text-black border-2 border-black px-5 flex items-center justify-center transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]">
+                      <Plus size={24} /> Agregar
+                    </button>
+                  </form>
+                ) : (
+                  <div className="bg-[#ffe600] border-2 border-black p-3 text-xs font-bold uppercase tracking-widest text-center mt-auto">
+                    Máximo de 4 equipos alcanzado
+                  </div>
+                )}
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-3 text-center">Recomendado: 2 a 4 equipos. Si tu grupo es grande, divídelo en pocos equipos grandes.</p>
               </div>
             </div>
 
@@ -1320,27 +1429,53 @@ function App() {
             </div>
           </div>
 
-          <div className="bg-[#ffe600] border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group flex flex-col md:flex-row items-center justify-between gap-8 mt-4">
-            <div className="absolute -right-20 -bottom-20 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-              <Settings size={300} />
-            </div>
-
-            <div className="relative z-10 max-w-2xl">
-              <div className="inline-block bg-white border-2 border-black px-3 py-1 font-bold text-xs uppercase tracking-widest mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                La herramienta principal
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch mt-4">
+            {/* Card izquierda: Cargar desde la nube */}
+            <div className="bg-[#00d0ff] border-4 border-black p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="bg-white border-4 border-black p-3 shrink-0 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -rotate-3">
+                  <Cloud size={28} className="text-[#00d0ff]" />
+                </div>
+                <h3 className="text-xl md:text-2xl font-black uppercase leading-tight">¿Ya tienes código?</h3>
               </div>
-              <h2 className="text-4xl md:text-5xl font-black uppercase mb-4 tracking-tighter">¡Crea tu propio Tablero!</h2>
-              <p className="text-black/80 font-bold text-lg leading-relaxed">
-                Juega con tus propias preguntas, tus datos y adaptado a tu materia específica. Usa nuestro editor visual y ten lista una partida única en 5 minutos.
-              </p>
+              <p className="text-black/80 font-bold text-sm mb-5">Si alguien te compartió un código de tablero, introdúcelo aquí para cargarlo y jugar al instante.</p>
+              <form onSubmit={handleSearchCloudBoard} className="flex flex-col sm:flex-row gap-2 mt-auto">
+                <input
+                  type="text"
+                  value={searchCloudCode}
+                  onChange={(e) => setSearchCloudCode(e.target.value.toUpperCase())}
+                  placeholder="EJ: ARQ-X7B2"
+                  className="flex-1 bg-white border-4 border-black px-4 py-3 font-black text-center tracking-widest uppercase focus:outline-none focus:ring-4 focus:ring-[#ffe600] shadow-inner"
+                />
+                <button
+                  type="submit"
+                  disabled={isSearching || !searchCloudCode.trim()}
+                  className="bg-black text-white px-5 py-3 border-4 border-black font-black uppercase text-sm hover:bg-[#ffe600] hover:text-black transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                  Cargar
+                </button>
+              </form>
+              {cloudError && <p className="text-black bg-white border-2 border-black font-bold text-xs text-center mt-3 p-2">{cloudError}</p>}
             </div>
 
-            <div className="relative z-10 shrink-0 w-full md:w-auto">
+            {/* Card derecha: Crear tablero */}
+            <div className="bg-[#ffe600] border-4 border-black p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col group relative overflow-hidden">
+              <div className="absolute -right-12 -bottom-12 opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+                <Settings size={180} />
+              </div>
+              <div className="relative z-10 flex items-center gap-4 mb-4">
+                <div className="bg-white border-4 border-black p-3 shrink-0 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -rotate-3">
+                  <Settings size={28} className="text-black" />
+                </div>
+                <h3 className="text-xl md:text-2xl font-black uppercase leading-tight">¿Y si fuera tu temario?</h3>
+              </div>
+              <p className="relative z-10 text-black/80 font-bold text-sm mb-5">Mete las preguntas y respuestas de TU materia. Editor visual, 10 minutos, una partida hecha a tu medida.</p>
               <button
                 onClick={handleEnterEditor}
-                className="w-full bg-black text-white hover:bg-white hover:text-black font-black text-xl py-6 px-10 border-4 border-black transition-all flex justify-center items-center gap-3 uppercase tracking-wide shadow-[8px_8px_0px_0px_rgba(0,0,0,0.4)] hover:shadow-none hover:translate-x-[8px] hover:translate-y-[8px]"
+                className="relative z-10 mt-auto w-full bg-black text-white hover:bg-white hover:text-black font-black text-base md:text-lg py-4 px-6 border-4 border-black transition-all flex justify-center items-center gap-2 uppercase tracking-wide shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
               >
-                <Settings size={28} /> Abrir Editor
+                <Settings size={20} /> Haz un tablero para tu materia
               </button>
             </div>
           </div>
@@ -1394,11 +1529,158 @@ function App() {
                 Visitar Portafolio <ArrowUpRight size={24} strokeWidth={3} />
               </a>
               <a
-                href="mailto:hello@reneblanco.com"
+                href="mailto:hola@arquitrivia.com"
                 className="bg-[#faf9f6] text-black hover:bg-[#00ff66] font-black text-xl px-10 py-5 border-4 border-black transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] flex items-center justify-center gap-3 uppercase tracking-wide"
               >
                 <Mail size={24} strokeWidth={3} /> Email Me
               </a>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // --- VISTA: PRIVACIDAD ---
+  if (gameState === 'privacy') {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
+          <button onClick={() => setGameState('landing')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
+            <ArrowLeft size={18} /> Volver al inicio
+          </button>
+          <Logo className="text-base" />
+        </header>
+
+        <main className="relative z-10 max-w-2xl mx-auto px-6 py-10 md:py-16 flex-1">
+          <div className="bg-white border-4 border-black p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="inline-block bg-[#00d0ff] border-4 border-black px-3 py-1.5 font-black text-[11px] uppercase tracking-widest mb-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -rotate-2">
+              Política de Privacidad
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tighter mb-2 uppercase">Cómo manejamos tus datos</h1>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-8">Última actualización: mayo de 2026</p>
+
+            <div className="space-y-6 text-gray-800 font-medium leading-relaxed text-sm md:text-base">
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Resumen rápido</h2>
+                <p>arquitrivia es una herramienta gratuita para jugar trivia en clase. No vendemos tus datos, no enviamos publicidad, no usamos tracking de terceros más allá del estrictamente necesario para que la plataforma funcione. Si quieres detalle, sigue leyendo.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Qué datos recolectamos</h2>
+                <ul className="list-disc list-inside space-y-2">
+                  <li><strong>Identificador anónimo de sesión.</strong> Cuando entras a arquitrivia, Firebase te asigna un ID anónimo aleatorio. No tiene tu nombre, tu correo ni nada identificable. Solo sirve para que puedas guardar tableros y postear comentarios.</li>
+                  <li><strong>Tableros que creas.</strong> Si guardas un tablero en la nube, almacenamos su contenido (categorías, preguntas, respuestas) junto con el código que generamos para él.</li>
+                  <li><strong>Comentarios y testimonios.</strong> Si dejas un comentario, guardamos el nombre que escribes, tu rol, institución (si la diste), texto y la imagen opcional que subiste.</li>
+                  <li><strong>Estadísticas anónimas de uso.</strong> Contamos cuántas partidas se han jugado en total. No rastreamos quién las juega.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Qué NO recolectamos</h2>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>Tu correo electrónico</li>
+                  <li>Tu nombre real (a menos que lo escribas tú al postear comentario)</li>
+                  <li>Tu ubicación</li>
+                  <li>Información de pago (no cobramos)</li>
+                  <li>Tu actividad fuera de arquitrivia.com</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Servicios de terceros que usamos</h2>
+                <p>arquitrivia corre sobre estas plataformas, que tienen sus propias políticas de privacidad:</p>
+                <ul className="list-disc list-inside space-y-2 mt-3">
+                  <li><strong>Firebase (Google):</strong> autenticación anónima y base de datos de tableros y comentarios.</li>
+                  <li><strong>Netlify:</strong> hosting del sitio.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Cookies</h2>
+                <p>arquitrivia no usa cookies de marketing ni de tracking de terceros. Sí usamos almacenamiento local del navegador (localStorage) para guardar tu progreso de partida actual — eso vive solo en tu dispositivo y no nos llega a nosotros.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Tus derechos</h2>
+                <p>Si quieres que borremos un comentario que dejaste o un tablero que creaste, escríbenos a <a href="mailto:hola@arquitrivia.com" className="text-black underline hover:text-[#ff3366]">hola@arquitrivia.com</a> con suficiente detalle para identificarlo (nombre que usaste, fecha aproximada, código del tablero). Lo borramos sin pedir más explicaciones.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Contacto</h2>
+                <p>arquitrivia es operada por un equipo de estudiantes de arquitectura. Para cualquier duda sobre privacidad, escribe a <a href="mailto:hola@arquitrivia.com" className="text-black underline hover:text-[#ff3366]">hola@arquitrivia.com</a>.</p>
+              </section>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // --- VISTA: TÉRMINOS ---
+  if (gameState === 'terms') {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
+          <button onClick={() => setGameState('landing')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
+            <ArrowLeft size={18} /> Volver al inicio
+          </button>
+          <Logo className="text-base" />
+        </header>
+
+        <main className="relative z-10 max-w-2xl mx-auto px-6 py-10 md:py-16 flex-1">
+          <div className="bg-white border-4 border-black p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="inline-block bg-[#ffe600] border-4 border-black px-3 py-1.5 font-black text-[11px] uppercase tracking-widest mb-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] -rotate-2">
+              Términos de Uso
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tighter mb-2 uppercase">Las reglas de la casa</h1>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-8">Última actualización: mayo de 2026</p>
+
+            <div className="space-y-6 text-gray-800 font-medium leading-relaxed text-sm md:text-base">
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Qué es arquitrivia</h2>
+                <p>arquitrivia.com es una plataforma web gratuita para que profesores y alumnos jueguen trivia en clase. No requiere registro ni pago. Al usarla, aceptas estos términos.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Uso aceptable</h2>
+                <p>Puedes usar arquitrivia para fines educativos, profesionales o personales. Lo que <strong>no</strong> puedes hacer:</p>
+                <ul className="list-disc list-inside space-y-2 mt-3">
+                  <li>Subir contenido que viole derechos de terceros (texto copiado de libros sin autorización, imágenes con copyright, etc.).</li>
+                  <li>Subir contenido ofensivo, ilegal, sexualmente explícito, violento o discriminatorio.</li>
+                  <li>Usar la plataforma para spam, fraude, suplantación de identidad o actividades comerciales no autorizadas.</li>
+                  <li>Intentar romper, hackear o sobrecargar el sistema.</li>
+                  <li>Usar bots automatizados para crear tableros, comentarios o partidas masivamente.</li>
+                </ul>
+                <p className="mt-3">Nos reservamos el derecho de eliminar contenido o bloquear acceso a usuarios que violen estas reglas.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Tu contenido</h2>
+                <p>Los tableros, preguntas y comentarios que creas son tuyos. Tú mantienes los derechos sobre ellos. Pero al subirlos a arquitrivia, nos das permiso de almacenarlos, mostrarlos y permitir que otros usuarios accedan a ellos (solo si los compartes públicamente o por código). No los vamos a vender ni a usar fuera de la plataforma.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Disponibilidad y errores</h2>
+                <p>arquitrivia se ofrece "tal cual está". Hacemos nuestro mejor esfuerzo por mantenerla funcionando, pero no garantizamos disponibilidad 24/7 ni que esté libre de errores. Si pierdes un tablero por una falla técnica, lo lamentamos pero no nos hacemos responsables.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Marcas y propiedad intelectual</h2>
+                <p>"arquitrivia" y el diseño visual de la plataforma son nuestros. No los uses para crear productos derivados sin permiso. El código fuente puede abrirse o mantenerse privado según decisión del equipo.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Cambios a estos términos</h2>
+                <p>Podemos actualizar estos términos con el tiempo. Si lo hacemos, cambiamos la fecha al inicio del documento. Si sigues usando arquitrivia después del cambio, asumimos que aceptas la nueva versión.</p>
+              </section>
+
+              <section>
+                <h2 className="text-lg md:text-xl font-black uppercase mb-2">Contacto</h2>
+                <p>Para cualquier duda sobre estos términos, escribe a <a href="mailto:hola@arquitrivia.com" className="text-black underline hover:text-[#ff3366]">hola@arquitrivia.com</a>.</p>
+              </section>
             </div>
           </div>
         </main>
@@ -1415,19 +1697,27 @@ function App() {
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
         }}></div>
-        <header className="relative z-10 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shadow-sm shrink-0">
-          <button onClick={() => setGameState('setup')} className="flex items-center gap-2 font-bold uppercase hover:underline">
-            <ArrowLeft size={20} /> Cancelar y Volver
+        <header className="relative z-50 border-b-4 border-black bg-white px-4 md:px-6 py-3 flex justify-between items-center sticky top-0 shadow-sm shrink-0 gap-2">
+          <button onClick={() => setGameState('setup')} className="flex items-center gap-2 font-bold uppercase hover:underline text-xs md:text-sm shrink-0">
+            <ArrowLeft size={18} /> <span className="hidden sm:inline">Cancelar y Volver</span>
           </button>
-          <div className="font-black text-xl tracking-tighter uppercase hidden md:block">Editor Maestro</div>
-          <button
-            onClick={handleSaveEditor}
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-[#ffe600] border-2 border-black text-black px-6 py-2 font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Cloud size={18} />}
-            {isSaving ? "Guardando..." : "Guardar en la Nube"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleStartFreshBoard}
+              className="flex items-center gap-1 md:gap-2 bg-white border-2 border-black text-black px-3 md:px-4 py-2 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-[#ff3366] hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+              title="Empezar un tablero nuevo desde cero"
+            >
+              <RotateCcw size={14} /> <span className="hidden md:inline">Empezar de cero</span><span className="md:hidden">Nuevo</span>
+            </button>
+            <button
+              onClick={handleSaveEditor}
+              disabled={isSaving}
+              className="flex items-center gap-1 md:gap-2 bg-[#ffe600] border-2 border-black text-black px-3 md:px-5 py-2 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Cloud size={14} />}
+              {isSaving ? "Guardando..." : "Guardar en la Nube"}
+            </button>
+          </div>
         </header>
 
         <main className="relative z-10 flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto pb-20">
@@ -1553,6 +1843,112 @@ function App() {
               </div>
             </div>
           )}
+        </main>
+        <Footer />
+
+        {showFreshBoardConfirm && (
+          <div className="fixed inset-0 bg-[#faf9f6]/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white border-4 border-black p-8 max-w-md w-full text-center shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+              <div className="mb-5 inline-block bg-[#ff3366] text-white border-4 border-black p-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                <RotateCcw size={36} strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-black uppercase tracking-tighter mb-3">¿Empezar un tablero nuevo?</h2>
+              <p className="text-gray-600 font-medium mb-3 text-sm leading-relaxed">
+                Esto borrará lo que tienes ahora en el editor y empezarás un tablero en blanco.
+              </p>
+              {boardCode && (
+                <p className="text-gray-700 font-bold mb-6 text-xs bg-[#faf9f6] border-2 border-black p-3">
+                  No te preocupes: tu tablero anterior <span className="font-mono uppercase">{boardCode}</span> sigue guardado en la nube. Puedes recuperarlo con su código desde la pantalla de inicio.
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowFreshBoardConfirm(false)}
+                  className="flex-1 bg-[#faf9f6] border-4 border-black hover:bg-white font-black py-3 uppercase tracking-wider text-sm transition-colors shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-[3px] hover:translate-x-[3px]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmFreshBoard}
+                  className="flex-1 bg-black text-white border-4 border-black hover:bg-[#ff3366] hover:text-white font-black py-3 uppercase tracking-wider text-sm transition-colors shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-[3px] hover:translate-x-[3px]"
+                >
+                  Sí, empezar de cero
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- VISTA: POST-GUARDADO ---
+  if (gameState === 'editorSaved') {
+    return (
+      <div className="min-h-screen bg-[#00ff66] text-black font-sans relative flex flex-col overflow-x-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-10" style={{
+          backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}></div>
+
+        <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
+          <button onClick={() => setGameState('setup')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
+            <ArrowLeft size={18} /> Volver a configurar partida
+          </button>
+          <Logo className="text-base" />
+        </header>
+
+        <main className="relative z-10 max-w-3xl mx-auto px-6 py-12 md:py-16 flex-1 w-full">
+          <div className="bg-white border-4 border-black p-8 md:p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="inline-block bg-black text-[#00ff66] border-4 border-black px-4 py-2 font-black text-xs uppercase tracking-widest mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-2">
+              ✓ Tablero guardado en la nube
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-3 uppercase">¡Listo, tu tablero está vivo!</h1>
+            <p className="text-base md:text-lg font-bold text-gray-700 mb-8 leading-relaxed">
+              Anota este código. Con él podrás abrir este tablero desde cualquier computadora — solo introdúcelo en la sección "¿Ya tienes código?" cuando vuelvas a entrar a arquitrivia.com.
+            </p>
+
+            <div className="mb-8">
+              <label className="block font-black uppercase tracking-widest text-xs text-gray-500 mb-3">Tu código:</label>
+              <div className="bg-[#ffe600] border-4 border-black px-6 py-6 md:py-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-4">
+                <span className="font-mono font-black text-3xl md:text-5xl tracking-widest uppercase break-all">{boardCode}</span>
+                <button
+                  onClick={handleCopyBoardCode}
+                  aria-label="Copiar código al portapapeles"
+                  className={`shrink-0 ${codeJustCopied ? 'bg-[#00ff66] text-black' : 'bg-black text-white hover:bg-white hover:text-black'} border-4 border-black px-4 py-2 md:px-5 md:py-3 font-black uppercase tracking-widest text-xs md:text-sm transition-colors flex items-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#ff3366]`}
+                >
+                  {codeJustCopied ? <><Check size={16} /> ¡Copiado!</> : <><Link size={16} /> Copiar</>}
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t-4 border-black pt-8">
+              <h2 className="font-black uppercase tracking-widest text-xs text-gray-500 mb-4">¿Y ahora?</h2>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handlePlaySavedBoard}
+                  disabled={teams.length === 0}
+                  className={`flex-1 font-black text-base md:text-lg py-4 px-6 border-4 border-black transition-all flex justify-center items-center gap-2 uppercase tracking-wide ${
+                    teams.length === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]'
+                      : 'bg-[#00ff66] hover:bg-black text-black hover:text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px]'
+                  }`}
+                >
+                  <Play size={20} fill="currentColor" /> Jugar este tablero ahora
+                </button>
+                <button
+                  onClick={() => setGameState('setup')}
+                  className="flex-1 bg-white text-black hover:bg-[#faf9f6] font-black text-base md:text-lg py-4 px-6 border-4 border-black transition-all flex justify-center items-center gap-2 uppercase tracking-wide shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px]"
+                >
+                  <ArrowLeft size={20} /> Volver a configurar
+                </button>
+              </div>
+              {teams.length === 0 && (
+                <p className="text-center text-xs font-bold text-[#ff3366] mt-3 uppercase tracking-widest">* Necesitas al menos un equipo para empezar a jugar — vuelve a configurar partida</p>
+              )}
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -1689,7 +2085,8 @@ function App() {
                       <button
                         type="button"
                         onClick={() => setNewCommentImage(null)}
-                        className="absolute -top-3 -right-3 bg-[#ff3366] text-white border-2 border-black p-1 hover:scale-110 transition-transform z-20"
+                        aria-label="Eliminar foto cargada"
+                        className="absolute -top-3 -right-3 bg-[#ff3366] text-white border-2 border-black p-1 hover:scale-110 transition-transform z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black"
                         title="Eliminar foto"
                       >
                         <X size={16} strokeWidth={4} />
@@ -1717,13 +2114,13 @@ function App() {
 
   // --- VISTA: TABLERO DE JUEGO EN VIVO ---
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-black flex flex-col font-sans select-none relative overflow-x-hidden">
+    <div className="h-screen bg-[#faf9f6] text-black flex flex-col font-sans select-none relative overflow-hidden">
       <div className="absolute inset-0 z-0 pointer-events-none opacity-20 fixed" style={{
         backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
         backgroundSize: '40px 40px'
       }}></div>
 
-      <header className="relative z-10 border-b-4 border-black bg-white px-4 md:px-6 py-4 flex justify-between items-center shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] shrink-0">
+      <header className="relative z-10 border-b-4 border-black bg-white px-4 md:px-6 py-3 flex justify-between items-center shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] shrink-0">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar flex-1 items-center justify-start md:justify-center pr-4">
           {teams.map(t => (
             <div key={t.id} className="flex flex-col items-center bg-white px-4 md:px-6 py-2 border-4 border-black min-w-[120px] md:min-w-[140px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] shrink-0">
@@ -1744,21 +2141,26 @@ function App() {
           </button>
           <button
             onClick={() => setShowResetConfirm(true)}
-            className="p-2 md:p-3 border-4 border-black hover:bg-[#ff3366] hover:text-white transition-all group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] bg-white"
+            aria-label="Terminar partida"
+            className="px-4 py-2 md:px-5 md:py-3 border-4 border-black hover:bg-[#ff3366] hover:text-white transition-all group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] bg-white flex items-center gap-2 font-black uppercase tracking-widest text-xs md:text-sm focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#ff3366]"
             title="Terminar Partida"
           >
-            <RotateCcw size={20} className="group-hover:-rotate-180 transition-transform duration-500" />
+            <RotateCcw size={18} className="group-hover:-rotate-180 transition-transform duration-500" />
+            <span className="hidden sm:inline">Terminar</span>
           </button>
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 p-4 md:p-8 flex flex-col justify-center max-w-[1600px] w-full mx-auto pb-12">
+      <main className="relative z-10 flex-1 min-h-0 p-3 md:p-6 max-w-[1600px] w-full mx-auto overflow-hidden">
         <div
-          className="grid gap-3 md:gap-4 h-full"
-          style={{ gridTemplateColumns: `repeat(${categories.length}, minmax(0, 1fr))` }}
+          className="grid gap-2 md:gap-3 h-full w-full"
+          style={{
+            gridTemplateColumns: `repeat(${categories.length}, minmax(0, 1fr))`,
+            gridTemplateRows: 'auto repeat(5, minmax(0, 1fr))'
+          }}
         >
           {categories.map((cat, i) => (
-            <div key={`header-${i}`} className="flex items-center justify-center text-center p-3 bg-black text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+            <div key={`header-${i}`} className="flex items-center justify-center text-center p-2 bg-black text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
               <h3 className="font-black text-xs md:text-sm lg:text-base uppercase tracking-widest leading-tight">
                 {cat.name || `Cat ${i + 1}`}
               </h3>
@@ -1774,15 +2176,14 @@ function App() {
                     key={q.id}
                     onClick={() => handleOpenQuestion(colIndex, rowIndex)}
                     className={`
-                      relative flex items-center justify-center p-4 transition-all duration-200 border-4 border-black
+                      relative flex items-center justify-center p-2 transition-all duration-200 border-4 border-black min-h-0
                       ${q.answered
                         ? 'bg-[#faf9f6] text-gray-300 cursor-default shadow-inner'
                         : 'bg-white cursor-pointer hover:bg-[#ffe600] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] active:shadow-none active:translate-x-[6px] active:translate-y-[6px]'}
                     `}
-                    style={{ aspectRatio: categories.length > 4 ? '1/1' : '4/3' }}
                   >
                     {!q.answered ? (
-                      <span className="text-3xl md:text-5xl font-black tracking-tighter">
+                      <span className="text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter">
                         {q.points}
                       </span>
                     ) : (
@@ -1795,7 +2196,6 @@ function App() {
           ))}
         </div>
       </main>
-      <Footer />
 
       {activeQuestion && (
         <div className="fixed inset-0 bg-[#faf9f6]/95 backdrop-blur-md z-50 flex flex-col overflow-y-auto">
@@ -1895,7 +2295,8 @@ function App() {
           <div className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
             <button
               onClick={() => setShowRulesModal(false)}
-              className="absolute top-4 right-4 bg-white border-4 border-black p-2 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              aria-label="Cerrar modal de reglas"
+              className="absolute top-4 right-4 bg-white border-4 border-black p-2 hover:bg-[#ffe600] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#00d0ff]"
             >
               <X size={24} strokeWidth={4} />
             </button>
