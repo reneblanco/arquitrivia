@@ -524,7 +524,7 @@ function App() {
       const board = PRELOADED_BOARDS.find(b => b.id === selectedBoardId);
       if (board) setCategories(JSON.parse(JSON.stringify(board.categories)));
     }
-    setGameState('playing');
+    setGameState('howToPlay');
 
     if (user) {
       try {
@@ -556,7 +556,7 @@ function App() {
     setTeams(newTeams);
     setCategories(JSON.parse(JSON.stringify(PRELOADED_BOARDS[boardIndex].categories)));
     setShowQuickPlayModal(false);
-    setGameState('playing');
+    setGameState('howToPlay');
 
     if (user) {
       try {
@@ -703,7 +703,7 @@ function App() {
 
   const handlePlaySavedBoard = () => {
     setCategories(JSON.parse(JSON.stringify(customCategories)));
-    setGameState('playing');
+    setGameState('howToPlay');
   };
 
   const handleAddCategory = () => {
@@ -2151,6 +2151,69 @@ function App() {
           </div>
         </main>
         <Footer />
+      </div>
+    );
+  }
+
+  // --- VISTA: CÓMO SE JUEGA (pantalla de arranque) ---
+  if (gameState === 'howToPlay') {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{
+          backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}></div>
+
+        <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
+          <button onClick={() => setGameState('landing')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
+            <ArrowLeft size={18} /> Salir al inicio
+          </button>
+          <Logo className="text-base" />
+        </header>
+
+        <main className="relative z-10 max-w-3xl mx-auto px-6 py-10 md:py-14 flex-1 w-full">
+          <div className="bg-white border-4 border-black p-6 md:p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="inline-block bg-[#ffe600] border-4 border-black px-4 py-2 font-black text-xs uppercase tracking-widest mb-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-2">
+              Antes de empezar
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-6 uppercase">Cómo se juega</h1>
+
+            <div className="bg-[#faf9f6] border-4 border-black p-5 md:p-6 mb-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+              <p className="font-bold text-base md:text-lg leading-relaxed">
+                Vas a ver un tablero con casillas. <strong>Cada casilla es una pregunta.</strong> El número que ves son los <strong>puntos que vale</strong> — entre más alto el número, más difícil la pregunta. Los equipos eligen qué casilla abrir.
+              </p>
+            </div>
+
+            <h2 className="font-black uppercase tracking-widest text-sm text-gray-500 mb-4">Las 3 reglas de oro</h2>
+            <div className="space-y-4 mb-10">
+              <div className="flex gap-4 items-start">
+                <div className="bg-[#00ff66] border-4 border-black w-10 h-10 shrink-0 flex items-center justify-center font-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">1</div>
+                <p className="font-medium text-gray-700 leading-relaxed pt-1">
+                  <strong>Acierta o castiga.</strong> Suma quien acierta. Resta quien intenta y falla. Quien se queda callado, ni gana ni pierde.
+                </p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div className="bg-[#00d0ff] border-4 border-black w-10 h-10 shrink-0 flex items-center justify-center font-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">2</div>
+                <p className="font-medium text-gray-700 leading-relaxed pt-1">
+                  <strong>El reloj no perdona.</strong> 20 segundos por pregunta. Si llega a cero sin respuesta, el equipo pierde el turno — pero no pierde puntos.
+                </p>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div className="bg-[#ffe600] border-4 border-black w-10 h-10 shrink-0 flex items-center justify-center font-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">3</div>
+                <p className="font-medium text-gray-700 leading-relaxed pt-1">
+                  <strong>Pregunta quemada.</strong> Casilla abierta es casilla jugada. Una vez revelada la respuesta, queda sellada por el resto de la partida.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setGameState('playing')}
+              className="w-full bg-[#00ff66] hover:bg-black text-black hover:text-white font-black text-xl md:text-2xl py-5 md:py-6 border-4 border-black transition-all flex justify-center items-center gap-3 uppercase tracking-wide shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[8px] hover:translate-y-[8px]"
+            >
+              <Play size={28} fill="currentColor" /> ¡Empezar!
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
