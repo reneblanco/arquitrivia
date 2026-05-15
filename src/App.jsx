@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Play, RotateCcw, Plus, Trash2, Check, X, AlertTriangle, Layers,
   ChevronRight, Settings, Save, ArrowLeft, Lightbulb, MonitorPlay,
@@ -10,7 +10,7 @@ import {
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import {
-  getFirestore, collection, addDoc, doc, setDoc, getDoc,
+  getFirestore, collection, addDoc, doc, setDoc, getDoc, updateDoc, increment,
   query, where, orderBy, limit, onSnapshot, serverTimestamp
 } from "firebase/firestore";
 
@@ -66,6 +66,50 @@ async function uploadImageToCloudinary(imageData) {
 
   const data = await response.json();
   return data.secure_url;
+}
+
+// ==========================================
+// HOOK: focus trap para modales (a11y)
+// Cuando un modal está abierto, atrapa el Tab/Shift+Tab dentro del modal
+// para que el foco del teclado no se salga al fondo de la página.
+// ==========================================
+function useFocusTrap(isOpen) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen || !ref.current) return;
+    const container = ref.current;
+
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = container.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      // Si el foco está fuera del modal, devuélvelo al primer focusable
+      if (!container.contains(active)) {
+        e.preventDefault();
+        first.focus();
+        return;
+      }
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  return ref;
 }
 
 // --- LIBRERÍA DE TABLEROS PRECARGADOS ---
@@ -366,6 +410,51 @@ function App() {
   const SUBJECTS = ["Arquitectura.", "Urbanismo.", "Diseño.", "Estructuras.", "Historia."];
   const [subjectIndex, setSubjectIndex] = useState(0);
 
+  // Refs para focus trap en modales (accesibilidad)
+  const commentModalRef = useFocusTrap(showCommentModal);
+  const quickPlayModalRef = useFocusTrap(showQuickPlayModal);
+  const rulesModalRef = useFocusTrap(showRulesModal);
+  const resetConfirmRef = useFocusTrap(showResetConfirm);
+  const freshBoardConfirmRef = useFocusTrap(showFreshBoardConfirm);
+  const activeQuestionRef = useFocusTrap(!!activeQuestion);
+
+  // Sistema de toasts (reemplaza alerts del navegador con UI consistente con el brand)
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error' | 'info', message: string }
+  const toastTimerRef = useRef(null);
+
+  const showToast = (type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ type, message });
+    toastTimerRef.current = setTimeout(() => setToast(null), 5500);
+  };
+
+  const dismissToast = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(null);
+  };
+
+  const renderToast = () => {
+    if (!toast) return null;
+    const bgColor = toast.type === 'success' ? 'bg-[#00ff66]' : toast.type === 'error' ? 'bg-[#ff3366]' : 'bg-[#ffe600]';
+    const textColor = toast.type === 'error' ? 'text-white' : 'text-black';
+    const icon = toast.type === 'success' ? <Check size={20} strokeWidth={3} /> : toast.type === 'error' ? <AlertTriangle size={20} strokeWidth={3} /> : <Info size={20} strokeWidth={3} />;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        onClick={dismissToast}
+        className={`fixed top-4 left-1/2 -translate-x-1/2 z-[200] ${bgColor} ${textColor} border-4 border-black px-5 py-3 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md w-[calc(100%-2rem)] cursor-pointer flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-200`}
+        title="Clic para cerrar"
+      >
+        <div className="shrink-0 pt-0.5">{icon}</div>
+        <p className="font-bold text-sm md:text-base leading-snug flex-1">{toast.message}</p>
+        <button type="button" aria-label="Cerrar notificación" className="shrink-0 hover:scale-110 transition-transform">
+          <X size={18} strokeWidth={3} />
+        </button>
+      </div>
+    );
+  };
+
   // --- FIREBASE AUTHENTICATION (Ghost Login) ---
   useEffect(() => {
     const initAuth = async () => {
@@ -462,12 +551,15 @@ function App() {
   }, [activeQuestion, showQuickPlayModal, showCommentModal, showRulesModal, showResetConfirm, showFreshBoardConfirm]);
 
   // --- LOCAL STORAGE LOGIC ---
+  // Cuando alguien entra a arquitrivia.com SIEMPRE arranca en el landing.
+  // Pero conservamos los datos de su trabajo (tableros, equipos, código) para
+  // que cuando navegue al editor o al setup, su info previa siga ahí.
   useEffect(() => {
     const savedData = localStorage.getItem('arquitrivia-save');
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        if (parsed.gameState && parsed.gameState !== 'landing') setGameState(parsed.gameState);
+        // Nota: NO restauramos gameState. Siempre arrancamos en 'landing'.
         if (parsed.teams) setTeams(parsed.teams);
         if (parsed.categories) setCategories(parsed.categories);
         if (parsed.customCategories) setCustomCategories(parsed.customCategories);
@@ -503,7 +595,7 @@ function App() {
     e.preventDefault();
     if (!newTeamName.trim()) return;
     if (teams.length >= 4) {
-      alert("Máximo 4 equipos por partida. Si tu grupo es grande, divídelo en 4 equipos grandes — la dinámica funciona mejor así.");
+      showToast('info', "Máximo 4 equipos por partida. Si tu grupo es grande, divídelo en pocos equipos grandes — la dinámica funciona mejor así.");
       return;
     }
     setTeams([...teams, { id: Date.now(), name: newTeamName.trim(), score: 0 }]);
@@ -529,14 +621,14 @@ function App() {
     if (user) {
       try {
         const statsRef = doc(db, "stats", "global");
-        const statsSnap = await getDoc(statsRef);
-        let currentCount = 35;
-        if (statsSnap.exists() && statsSnap.data().gamesPlayed) {
-          currentCount = statsSnap.data().gamesPlayed;
-        }
-        await setDoc(statsRef, { gamesPlayed: currentCount + 1 }, { merge: true });
+        await updateDoc(statsRef, { gamesPlayed: increment(1) });
       } catch (e) {
-        console.error("Error updating game count:", e);
+        // Si el doc no existe aún, lo creamos con 36 (35 + 1)
+        try {
+          await setDoc(doc(db, "stats", "global"), { gamesPlayed: 36 }, { merge: true });
+        } catch (innerErr) {
+          console.error("Error updating game count:", innerErr);
+        }
       }
     }
   };
@@ -561,13 +653,14 @@ function App() {
     if (user) {
       try {
         const statsRef = doc(db, "stats", "global");
-        const statsSnap = await getDoc(statsRef);
-        let currentCount = 35;
-        if (statsSnap.exists() && statsSnap.data().gamesPlayed) {
-          currentCount = statsSnap.data().gamesPlayed;
+        await updateDoc(statsRef, { gamesPlayed: increment(1) });
+      } catch (e) {
+        try {
+          await setDoc(doc(db, "stats", "global"), { gamesPlayed: 36 }, { merge: true });
+        } catch (innerErr) {
+          console.error("Error updating game count:", innerErr);
         }
-        await setDoc(statsRef, { gamesPlayed: currentCount + 1 }, { merge: true });
-      } catch (e) {}
+      }
     }
   };
 
@@ -639,7 +732,7 @@ function App() {
       setGameState('editorSaved');
     } catch (error) {
       console.error("Error guardando tablero en la nube:", error);
-      alert("Hubo un error al guardar en la nube. Revisa tu conexión.");
+      showToast('error', "Hubo un error al guardar en la nube. Revisa tu conexión e intenta de nuevo.");
     } finally {
       setIsSaving(false);
     }
@@ -749,15 +842,17 @@ function App() {
   // muy por debajo del límite de 1 MB por documento de Firestore.
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
+    // Reset el input para que se pueda volver a seleccionar el mismo archivo después
+    e.target.value = '';
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert("Solo se aceptan archivos de imagen.");
+      showToast('error', "Solo se aceptan archivos de imagen.");
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("La imagen original es muy grande. Máximo 10 MB.");
+      showToast('error', "La imagen original es muy grande. Máximo 10 MB.");
       return;
     }
 
@@ -790,12 +885,12 @@ function App() {
         setNewCommentImage(compressed);
       };
       img.onerror = () => {
-        alert("No se pudo procesar la imagen. Prueba con otro archivo.");
+        showToast('error', "No se pudo procesar la imagen. Prueba con otro archivo.");
       };
       img.src = event.target.result;
     };
     reader.onerror = () => {
-      alert("Error leyendo el archivo.");
+      showToast('error', "Error leyendo el archivo. Intenta con otra imagen.");
     };
     reader.readAsDataURL(file);
   };
@@ -840,7 +935,7 @@ function App() {
       setNewCommentRating(5);
       setNewCommentImage(null);
 
-      alert("¡Gracias por tu comentario! Está pendiente de revisión y aparecerá publicado en breve.");
+      showToast('success', "¡Gracias por tu comentario! Está pendiente de revisión y aparecerá publicado en breve.");
 
       if (gameState === 'postgame') {
         handleFinalizeCleanupToHome();
@@ -849,7 +944,7 @@ function App() {
       }
     } catch (error) {
       console.error("Error guardando comentario:", error);
-      alert("Hubo un error al publicar el comentario. Si subiste una foto, revisa tu conexión e intenta de nuevo.");
+      showToast('error', "Hubo un error al publicar el comentario. Si subiste una foto, revisa tu conexión e intenta de nuevo.");
     } finally {
       setIsSubmittingComment(false);
     }
@@ -903,6 +998,7 @@ function App() {
   if (gameState === 'landing') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black font-sans selection:bg-[#ffe600] selection:text-black relative flex flex-col">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px',
@@ -1218,7 +1314,7 @@ function App() {
 
         {showCommentModal && (
           <div className="fixed inset-0 bg-[#faf9f6]/95 z-[100] flex items-start justify-center p-4 pt-12 md:pt-20 backdrop-blur-md overflow-y-auto">
-            <div className="relative z-10 w-full max-w-4xl bg-[#ff3366] border-4 border-black p-6 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
+            <div ref={commentModalRef} role="dialog" aria-modal="true" aria-label="Deja tu comentario" className="relative z-10 w-full max-w-4xl bg-[#ff3366] border-4 border-black p-6 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
               <button
                 onClick={() => setShowCommentModal(false)}
                 aria-label="Cerrar modal de comentarios"
@@ -1236,7 +1332,7 @@ function App() {
                 <div className="space-y-6">
                   <div>
                     <label className="block font-bold uppercase text-xs text-gray-500 mb-2">Tu Nombre o Apodo</label>
-                    <input type="text" value={newCommentName} onChange={(e) => setNewCommentName(e.target.value)} placeholder="Ej: Profe Roberto, Ana..." required className="w-full bg-[#faf9f6] border-4 border-black px-4 py-3 font-bold focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner" />
+                    <input type="text" value={newCommentName} onChange={(e) => setNewCommentName(e.target.value.slice(0, 100))} maxLength={100} placeholder="Ej: Profe Roberto, Ana..." required className="w-full bg-[#faf9f6] border-4 border-black px-4 py-3 font-bold focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -1268,7 +1364,8 @@ function App() {
                   </div>
                   <div>
                     <label className="block font-bold uppercase text-xs text-gray-500 mb-2">Comentarios sobre tu experiencia</label>
-                    <textarea value={newCommentText} onChange={(e) => setNewCommentText(e.target.value)} rows="3" required placeholder="Cuéntanos cómo fue la dinámica con tu grupo..." className="w-full bg-[#faf9f6] border-4 border-black px-4 py-3 font-medium focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner resize-none" />
+                    <textarea value={newCommentText} onChange={(e) => setNewCommentText(e.target.value.slice(0, 1000))} maxLength={1000} rows="3" required placeholder="Cuéntanos cómo fue la dinámica con tu grupo..." className="w-full bg-[#faf9f6] border-4 border-black px-4 py-3 font-medium focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner resize-none" />
+                    <div className={`text-xs font-bold uppercase tracking-widest text-right mt-1 ${newCommentText.length > 900 ? 'text-[#ff3366]' : 'text-gray-400'}`}>{newCommentText.length}/1000</div>
                   </div>
                   <div>
                     <label className="block font-bold uppercase text-xs text-gray-500 mb-2">Evidencia de clase (Opcional 📸)</label>
@@ -1310,7 +1407,7 @@ function App() {
               backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
               backgroundSize: '40px 40px'
             }}></div>
-            <div className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] mb-16 shrink-0">
+            <div ref={quickPlayModalRef} role="dialog" aria-modal="true" aria-label="Partida Rápida" className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] mb-16 shrink-0">
               <button
                 onClick={() => setShowQuickPlayModal(false)}
                 aria-label="Cerrar modal"
@@ -1371,6 +1468,7 @@ function App() {
   if (gameState === 'setup') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black flex flex-col relative overflow-x-hidden font-sans">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-20 fixed" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -1532,6 +1630,7 @@ function App() {
   if (gameState === 'about') {
     return (
       <div className="min-h-screen bg-[#ffe600] text-black font-sans selection:bg-black selection:text-white relative flex flex-col overflow-x-hidden">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-10" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -1589,6 +1688,7 @@ function App() {
   if (gameState === 'privacy') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        {renderToast()}
         <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
           <button onClick={() => setGameState('landing')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
             <ArrowLeft size={18} /> Volver al inicio
@@ -1666,6 +1766,7 @@ function App() {
   if (gameState === 'terms') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        {renderToast()}
         <header className="relative z-50 border-b-4 border-black bg-white px-6 py-4 flex justify-between items-center sticky top-0 shrink-0">
           <button onClick={() => setGameState('landing')} className="flex items-center gap-2 font-bold uppercase hover:underline text-sm">
             <ArrowLeft size={18} /> Volver al inicio
@@ -1736,6 +1837,7 @@ function App() {
   if (gameState === 'editor') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black flex flex-col font-sans relative overflow-x-hidden">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-20 fixed" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -1891,7 +1993,7 @@ function App() {
 
         {showFreshBoardConfirm && (
           <div className="fixed inset-0 bg-[#faf9f6]/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white border-4 border-black p-8 max-w-md w-full text-center shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div ref={freshBoardConfirmRef} role="dialog" aria-modal="true" aria-label="Confirmar empezar de cero" className="bg-white border-4 border-black p-8 max-w-md w-full text-center shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
               <div className="mb-5 inline-block bg-[#ff3366] text-white border-4 border-black p-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                 <RotateCcw size={36} strokeWidth={2.5} />
               </div>
@@ -1929,6 +2031,7 @@ function App() {
   if (gameState === 'editorSaved') {
     return (
       <div className="min-h-screen bg-[#00ff66] text-black font-sans relative flex flex-col overflow-x-hidden">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-10" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -2002,6 +2105,7 @@ function App() {
   if (gameState === 'postgame') {
     return (
       <div className="min-h-screen bg-[#00d0ff] text-black font-sans selection:bg-black selection:text-white relative flex flex-col overflow-x-hidden">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-10" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -2040,7 +2144,8 @@ function App() {
                   <input
                     type="text"
                     value={newCommentName}
-                    onChange={(e) => setNewCommentName(e.target.value)}
+                    onChange={(e) => setNewCommentName(e.target.value.slice(0, 100))}
+                    maxLength={100}
                     placeholder="Ej: Profe Roberto, Ana, Los Constructores..."
                     required
                     className="w-full bg-white border-4 border-black px-4 py-3 font-bold focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner"
@@ -2098,12 +2203,14 @@ function App() {
                   <label className="block font-bold uppercase text-xs text-gray-500 mb-2">Comentarios sobre la plataforma</label>
                   <textarea
                     value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
+                    onChange={(e) => setNewCommentText(e.target.value.slice(0, 1000))}
+                    maxLength={1000}
                     rows="3"
                     required
                     placeholder="Cuéntanos cómo fue la dinámica con tu grupo..."
                     className="w-full bg-white border-4 border-black px-4 py-3 font-medium focus:outline-none focus:bg-[#ffe600]/20 transition-colors shadow-inner resize-none"
                   />
+                  <div className={`text-xs font-bold uppercase tracking-widest text-right mt-1 ${newCommentText.length > 900 ? 'text-[#ff3366]' : 'text-gray-400'}`}>{newCommentText.length}/1000</div>
                 </div>
 
                 <div>
@@ -2159,6 +2266,7 @@ function App() {
   if (gameState === 'howToPlay') {
     return (
       <div className="min-h-screen bg-[#faf9f6] text-black font-sans relative flex flex-col">
+        {renderToast()}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{
           backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
           backgroundSize: '40px 40px'
@@ -2221,6 +2329,7 @@ function App() {
   // --- VISTA: TABLERO DE JUEGO EN VIVO ---
   return (
     <div className="h-screen bg-[#faf9f6] text-black flex flex-col font-sans select-none relative overflow-hidden">
+      {renderToast()}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-20 fixed" style={{
         backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)',
         backgroundSize: '40px 40px'
@@ -2310,7 +2419,7 @@ function App() {
             backgroundSize: '40px 40px'
           }}></div>
           <div className="min-h-full flex items-start justify-center p-4 pt-12 md:p-12 md:pt-20 text-center relative z-10 pb-24">
-            <div className="animate-in fade-in zoom-in-95 duration-200 max-w-5xl w-full py-12 bg-white border-4 border-black p-6 md:p-8 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] shrink-0">
+            <div ref={activeQuestionRef} role="dialog" aria-modal="true" aria-label="Pregunta del tablero" className="animate-in fade-in zoom-in-95 duration-200 max-w-5xl w-full py-12 bg-white border-4 border-black p-6 md:p-8 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] shrink-0">
 
               <div className="inline-flex items-center gap-3 px-6 py-2 border-4 border-black bg-[#ffe600] mb-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <h2 className="text-black font-black text-sm uppercase tracking-widest">
@@ -2398,7 +2507,7 @@ function App() {
 
       {showRulesModal && (
         <div className="fixed inset-0 bg-[#faf9f6]/95 z-[100] flex items-start justify-center p-4 pt-12 md:pt-20 backdrop-blur-md overflow-y-auto">
-          <div className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
+          <div ref={rulesModalRef} role="dialog" aria-modal="true" aria-label="Reglas del juego" className="relative z-10 w-full max-w-4xl bg-white border-4 border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] mb-24 shrink-0">
             <button
               onClick={() => setShowRulesModal(false)}
               aria-label="Cerrar modal de reglas"
@@ -2453,7 +2562,7 @@ function App() {
 
       {showResetConfirm && (
         <div className="fixed inset-0 bg-[#faf9f6]/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border-4 border-black p-10 max-w-md w-full text-center shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
+          <div ref={resetConfirmRef} role="dialog" aria-modal="true" aria-label="Confirmar terminar partida" className="bg-white border-4 border-black p-10 max-w-md w-full text-center shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
             <div className="mb-6 inline-block bg-[#ff3366] text-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <AlertTriangle size={48} strokeWidth={2} />
             </div>

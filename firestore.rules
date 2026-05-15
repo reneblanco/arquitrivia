@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // COMENTARIOS: lectura solo aprobados, escritura solo crear (con flag pendiente)
+    match /comments/{commentId} {
+      allow read: if resource.data.approved == true;
+      allow create: if request.auth != null
+                    && request.resource.data.approved == false
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() < 1000
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() < 100;
+      allow update, delete: if false;
+    }
+
+    // TABLEROS: lectura pública, solo el creador puede modificar el suyo
+    match /boards/{boardId} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.creatorUid == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.creatorUid == request.auth.uid
+                    && request.resource.data.creatorUid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ESTADÍSTICAS: lectura pública, solo se puede incrementar de 1 en 1
+    match /stats/global {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.gamesPlayed is int
+                    && request.resource.data.gamesPlayed >= 0;
+      allow update: if request.auth != null
+                    && request.resource.data.gamesPlayed is int
+                    && request.resource.data.gamesPlayed == resource.data.gamesPlayed + 1;
+      allow delete: if false;
+    }
+  }
+}
