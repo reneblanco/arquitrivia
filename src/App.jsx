@@ -31,6 +31,43 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ==========================================
+// CLOUDINARY: subida de imágenes de comentarios
+// ==========================================
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+// Convierte un data URL (base64) a Blob para poder subirlo
+function dataURLtoBlob(dataURL) {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
+
+// Sube una imagen (Blob o data URL) a Cloudinary y devuelve la URL pública
+async function uploadImageToCloudinary(imageData) {
+  const blob = typeof imageData === 'string' ? dataURLtoBlob(imageData) : imageData;
+  const formData = new FormData();
+  formData.append('file', blob);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: 'POST', body: formData }
+  );
+
+  if (!response.ok) {
+    throw new Error('Cloudinary upload failed: ' + response.status);
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+}
+
 // --- LIBRERÍA DE TABLEROS PRECARGADOS ---
 const PRELOADED_BOARDS = [
   {
@@ -774,20 +811,26 @@ function App() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     const formattedDate = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
 
-    const commentData = {
-      name: newCommentName,
-      role: newCommentRole,
-      school: newCommentSchool,
-      rating: newCommentRating,
-      text: newCommentText,
-      date: formattedDate,
-      color: randomColor,
-      image: newCommentImage,
-      approved: false,
-      timestamp: serverTimestamp()
-    };
-
     try {
+      // Si hay imagen, súbela a Cloudinary primero y guarda solo la URL
+      let imageUrl = null;
+      if (newCommentImage) {
+        imageUrl = await uploadImageToCloudinary(newCommentImage);
+      }
+
+      const commentData = {
+        name: newCommentName,
+        role: newCommentRole,
+        school: newCommentSchool,
+        rating: newCommentRating,
+        text: newCommentText,
+        date: formattedDate,
+        color: randomColor,
+        image: imageUrl,
+        approved: false,
+        timestamp: serverTimestamp()
+      };
+
       await addDoc(collection(db, "comments"), commentData);
 
       setNewCommentName("");
@@ -806,7 +849,7 @@ function App() {
       }
     } catch (error) {
       console.error("Error guardando comentario:", error);
-      alert("Hubo un error al publicar el comentario.");
+      alert("Hubo un error al publicar el comentario. Si subiste una foto, revisa tu conexión e intenta de nuevo.");
     } finally {
       setIsSubmittingComment(false);
     }
