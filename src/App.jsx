@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Play, RotateCcw, Plus, Trash2, Check, X, AlertTriangle, Layers,
   ChevronRight, Settings, Save, ArrowLeft, Lightbulb, MonitorPlay,
@@ -110,6 +111,48 @@ function useFocusTrap(isOpen) {
   }, [isOpen]);
 
   return ref;
+}
+
+// ==========================================
+// ROUTING: URL como fuente de verdad
+// Mantenemos los nombres de gameState para que el resto del código no cambie,
+// pero ahora derivan de la URL. Esto habilita back/forward del navegador,
+// deep linking a tableros (/b/CODIGO), y URLs reales por vista.
+// ==========================================
+const ROUTE_TO_GAMESTATE = {
+  '/': 'landing',
+  '/setup': 'setup',
+  '/editor': 'editor',
+  '/about': 'about',
+  '/privacy': 'privacy',
+  '/terms': 'terms',
+  '/how-to-play': 'howToPlay',
+  '/play': 'playing',
+  '/postgame': 'postgame',
+  '/saved': 'editorSaved',
+};
+
+const GAMESTATE_TO_ROUTE = {
+  landing: '/',
+  setup: '/setup',
+  editor: '/editor',
+  about: '/about',
+  privacy: '/privacy',
+  terms: '/terms',
+  howToPlay: '/how-to-play',
+  playing: '/play',
+  postgame: '/postgame',
+  editorSaved: '/saved',
+};
+
+function pathToGameState(pathname) {
+  if (pathname.startsWith('/b/')) return 'deepLinkLoading';
+  return ROUTE_TO_GAMESTATE[pathname] || 'landing';
+}
+
+function extractDeepLinkCode(pathname) {
+  const match = pathname.match(/^\/b\/([A-Za-z0-9-]+)\/?$/);
+  return match ? match[1].toUpperCase() : null;
 }
 
 // --- LIBRERÍA DE TABLEROS PRECARGADOS ---
@@ -357,7 +400,16 @@ const PRELOADED_BOARDS = [
 ];
 
 function App() {
-  const [gameState, setGameState] = useState('landing'); // landing, setup, editor, playing, postgame, about
+  // gameState ahora deriva de la URL (vía React Router). setGameState wrappea navigate
+  // para no tener que cambiar todo el código que ya usa esta API.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const gameState = pathToGameState(location.pathname);
+  const setGameState = (newState) => {
+    const path = GAMESTATE_TO_ROUTE[newState];
+    if (path !== undefined) navigate(path);
+  };
+
   const [teams, setTeams] = useState([]);
   const [newTeamName, setNewTeamName] = useState("");
   const [user, setUser] = useState(null);
@@ -471,6 +523,41 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- DEEP LINK: /b/:code ---
+  // Cuando alguien abre arquitrivia.com/b/ARQ-X7B2, cargamos ese tablero
+  // automáticamente y lo mandamos a /setup con todo precargado.
+  useEffect(() => {
+    const code = extractDeepLinkCode(location.pathname);
+    if (!code) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const docRef = doc(db, "boards", code);
+        const docSnap = await getDoc(docRef);
+        if (cancelled) return;
+        if (docSnap.exists()) {
+          const boardData = docSnap.data();
+          setCustomCategories(boardData.categories);
+          setBoardCode(boardData.code);
+          setSelectedBoardId('custom');
+          showToast('success', `Tablero ${code} cargado. Configura tu partida.`);
+          navigate('/setup', { replace: true });
+        } else {
+          showToast('error', `No encontramos un tablero con el código ${code}.`);
+          navigate('/', { replace: true });
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error en deep link:', error);
+        showToast('error', 'Error al cargar el tablero compartido.');
+        navigate('/', { replace: true });
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [location.pathname]);
+
   // --- FIREBASE: ESCUCHAR COMENTARIOS Y CONTADOR ---
   useEffect(() => {
     if (!user) return;
@@ -524,6 +611,14 @@ function App() {
   // --- UX: scroll al inicio cuando cambia la vista ---
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [gameState]);
+
+  // --- UX: si entras directo a /editor (refresh o URL), inicializa el editor con los datos guardados ---
+  useEffect(() => {
+    if (gameState === 'editor' && editingCategories.length === 0) {
+      setEditingCategories(JSON.parse(JSON.stringify(customCategories)));
+      setActiveEditCatIndex(0);
+    }
   }, [gameState]);
 
   // --- ACCESIBILIDAD: Escape cierra cualquier modal abierto ---
@@ -789,7 +884,9 @@ function App() {
   };
 
   const handleCopyBoardCode = () => {
-    navigator.clipboard.writeText(boardCode);
+    // Copia el LINK completo /b/CODE — el canal viral para compartir tableros.
+    const shareUrl = `${window.location.origin}/b/${boardCode}`;
+    navigator.clipboard.writeText(shareUrl);
     setCodeJustCopied(true);
     setTimeout(() => setCodeJustCopied(false), 2500);
   };
@@ -993,6 +1090,19 @@ function App() {
       </div>
     </footer>
   );
+
+  // --- VISTA: CARGA DE DEEP LINK (/b/:code) ---
+  if (gameState === 'deepLinkLoading') {
+    return (
+      <div className="min-h-screen bg-[#faf9f6] text-black font-sans flex items-center justify-center px-6">
+        {renderToast()}
+        <div className="text-center">
+          <Loader2 size={56} className="animate-spin mx-auto mb-6 text-black" />
+          <p className="font-black uppercase tracking-widest text-sm md:text-base">Cargando tablero compartido...</p>
+        </div>
+      </div>
+    );
+  }
 
   // --- VISTA: LANDING PAGE ---
   if (gameState === 'landing') {
@@ -2052,21 +2162,22 @@ function App() {
 
             <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-3 uppercase">¡Listo, tu tablero está vivo!</h1>
             <p className="text-base md:text-lg font-bold text-gray-700 mb-8 leading-relaxed">
-              Anota este código. Con él podrás abrir este tablero desde cualquier computadora — solo introdúcelo en la sección "¿Ya tienes código?" cuando vuelvas a entrar a arquitrivia.com.
+              Comparte el link con quien quieras — al abrirlo carga este tablero al instante, listo para jugar. O anota el código para usarlo después desde "¿Ya tienes código?" en la pantalla de inicio.
             </p>
 
             <div className="mb-8">
-              <label className="block font-black uppercase tracking-widest text-xs text-gray-500 mb-3">Tu código:</label>
-              <div className="bg-[#ffe600] border-4 border-black px-6 py-6 md:py-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-4">
-                <span className="font-mono font-black text-3xl md:text-5xl tracking-widest uppercase break-all">{boardCode}</span>
+              <label className="block font-black uppercase tracking-widest text-xs text-gray-500 mb-3">Link para compartir:</label>
+              <div className="bg-[#ffe600] border-4 border-black px-4 py-4 md:px-6 md:py-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <span className="font-mono font-bold text-sm md:text-base break-all flex-1 min-w-0">{typeof window !== 'undefined' ? window.location.origin : 'https://arquitrivia.com'}/b/{boardCode}</span>
                 <button
                   onClick={handleCopyBoardCode}
-                  aria-label="Copiar código al portapapeles"
-                  className={`shrink-0 ${codeJustCopied ? 'bg-[#00ff66] text-black' : 'bg-black text-white hover:bg-white hover:text-black'} border-4 border-black px-4 py-2 md:px-5 md:py-3 font-black uppercase tracking-widest text-xs md:text-sm transition-colors flex items-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#ff3366]`}
+                  aria-label="Copiar link al portapapeles"
+                  className={`shrink-0 ${codeJustCopied ? 'bg-[#00ff66] text-black' : 'bg-black text-white hover:bg-white hover:text-black'} border-4 border-black px-4 py-2 md:px-5 md:py-3 font-black uppercase tracking-widest text-xs md:text-sm transition-colors flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#ff3366]`}
                 >
-                  {codeJustCopied ? <><Check size={16} /> ¡Copiado!</> : <><Link size={16} /> Copiar</>}
+                  {codeJustCopied ? <><Check size={16} /> ¡Copiado!</> : <><Link size={16} /> Copiar link</>}
                 </button>
               </div>
+              <div className="mt-3 text-xs font-bold uppercase tracking-widest text-gray-500">O usa el código: <span className="font-mono text-black ml-1">{boardCode}</span></div>
             </div>
 
             <div className="border-t-4 border-black pt-8">
